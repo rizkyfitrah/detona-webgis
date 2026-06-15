@@ -10,6 +10,7 @@ import MapPanel from './MapPanel';
 import MapLegend from './MapLegend';
 import MapSidebar from './MapSidebar';
 
+// Perbaiki ikon default Leaflet
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
@@ -27,14 +28,16 @@ interface Proyek {
   geom: { coordinates: [number, number] };
 }
 
-// Ambil instance map
+// Komponen pembantu untuk mengambil instance peta
 function MapController({ mapRef }: { mapRef: React.MutableRefObject<L.Map | null> }) {
   const map = useMap();
-  useEffect(() => { mapRef.current = map; }, [map, mapRef]);
+  useEffect(() => {
+    mapRef.current = map;
+  }, [map, mapRef]);
   return null;
 }
 
-// Render marker dengan highlight untuk yang dipilih
+// Komponen penampung marker dengan event hover & klik
 function ProyekMarkers({
   proyekData,
   visibleDivisi,
@@ -82,7 +85,17 @@ function ProyekMarkers({
             eventHandlers={{
               mouseover: (e) => {
                 const pos = (e.originalEvent as MouseEvent);
-                onHover({ id: p.id, nama: p.nama_lokasi, divisi: p.divisi, tipe: p.tipe, status: p.status, data_summary: p.data_summary }, { x: pos.clientX, y: pos.clientY });
+                onHover(
+                  {
+                    id: p.id,
+                    nama: p.nama_lokasi,
+                    divisi: p.divisi,
+                    tipe: p.tipe,
+                    status: p.status,
+                    data_summary: p.data_summary,
+                  },
+                  { x: pos.clientX, y: pos.clientY }
+                );
               },
               mouseout: () => onHoverEnd(),
               click: () => onClickProyek(p),
@@ -101,8 +114,15 @@ function FloatingParticles() {
       {[...Array(20)].map((_, i) => (
         <div
           key={i}
-          className="particle"
           style={{
+            position: 'absolute',
+            width: '2px',
+            height: '2px',
+            background: 'rgba(204, 51, 51, 0.6)',
+            borderRadius: '50%',
+            filter: 'blur(1px)',
+            pointerEvents: 'none',
+            animation: `float 8s ease-in-out infinite`,
             left: `${Math.random() * 100}%`,
             top: `${Math.random() * 100}%`,
             animationDelay: `${Math.random() * 10}s`,
@@ -124,6 +144,7 @@ export default function MapView() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [mapReady, setMapReady] = useState(false);
 
   const mapRef = useRef<L.Map | null>(null);
   const searchBarRef = useRef<HTMLDivElement | null>(null);
@@ -143,9 +164,14 @@ export default function MapView() {
     })));
   }, []);
 
-  useEffect(() => { fetchProyek(); }, [fetchProyek]);
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    fetchProyek().then(() => {
+      setMounted(true);
+      setMapReady(true);
+    });
+  }, [fetchProyek]);
 
+  // Zoom ke proyek yang dipilih
   useEffect(() => {
     if (selectedProyek && mapRef.current) {
       const [lng, lat] = selectedProyek.geom.coordinates;
@@ -186,7 +212,14 @@ export default function MapView() {
 
   return (
     <div className="relative w-full h-screen" style={{ background: '#0a0a0a' }}>
-      <MapContainer center={[-2.5, 114.5]} zoom={5} style={{ height: '100%', width: '100%', background: 'transparent' }} zoomControl={false}>
+      {/* MapContainer dengan key dinamis untuk mencegah error reuse */}
+      <MapContainer
+        key={mapReady ? 'map-ready' : 'map-loading'}
+        center={[-2.5, 114.5]}
+        zoom={5}
+        style={{ height: '100%', width: '100%', background: 'transparent' }}
+        zoomControl={false}
+      >
         <MapController mapRef={mapRef} />
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>'

@@ -30,6 +30,20 @@ export default function MapPanel({
   if (!proyek) return null;
 
   const isSupply = proyek.divisi === 'supply_chain';
+  const summary = proyek.data_summary || {};
+
+  // Progress bar
+  let progressPercent = 0;
+  let progressLabel = '';
+  if (isSupply) {
+    const kapasitas = summary.kapasitas_ton || 1;
+    const stok = summary.stok_ton || 0;
+    progressPercent = Math.min((stok / kapasitas) * 100, 100);
+    progressLabel = `Stok ${stok} / ${kapasitas} ton`;
+  } else {
+    progressPercent = summary.progress_mingguan_persen || 0;
+    progressLabel = `Progress ${progressPercent}%`;
+  }
 
   return (
     <div
@@ -65,14 +79,14 @@ export default function MapPanel({
             position: 'absolute',
             top: '20px',
             right: '20px',
-            width: '36px',
-            height: '36px',
+            width: '40px',
+            height: '40px',
             background: 'rgba(255,255,255,0.05)',
             backdropFilter: 'blur(10px)',
             border: '1px solid rgba(255,255,255,0.1)',
             borderRadius: '50%',
             color: '#CC3333',
-            fontSize: '18px',
+            fontSize: '20px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -94,63 +108,105 @@ export default function MapPanel({
         </button>
 
         {/* Header */}
-        <div style={{ marginBottom: '28px' }}>
-          <div style={{ width: '30px', height: '2px', background: '#CC3333', marginBottom: '16px' }} />
-          <h2 style={{ fontSize: '22px', fontWeight: 600, letterSpacing: '0.5px', margin: '0 0 8px 0' }}>
+        <div style={{ marginBottom: '32px' }}>
+          <div style={{ width: '30px', height: '2px', background: '#CC3333', marginBottom: '18px' }} />
+          <h2 style={{ fontSize: '26px', fontWeight: 600, letterSpacing: '0.5px', margin: '0 0 10px 0' }}>
             {proyek.nama_lokasi}
           </h2>
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '12px', padding: '4px 12px', borderRadius: '20px', background: isSupply ? 'rgba(59,130,246,0.12)' : 'rgba(249,115,22,0.12)', color: isSupply ? '#60A5FA' : '#FB923C', border: `1px solid ${isSupply ? 'rgba(59,130,246,0.3)' : 'rgba(249,115,22,0.3)'}`, fontWeight: 500 }}>
+            <span style={{ fontSize: '14px', padding: '5px 14px', borderRadius: '20px', background: isSupply ? 'rgba(59,130,246,0.12)' : 'rgba(249,115,22,0.12)', color: isSupply ? '#60A5FA' : '#FB923C', border: `1px solid ${isSupply ? 'rgba(59,130,246,0.3)' : 'rgba(249,115,22,0.3)'}`, fontWeight: 500 }}>
               {isSupply ? 'Supply Chain' : 'Operasional'}
             </span>
-            <span style={{ fontSize: '12px', color: '#B0B0B0', textTransform: 'capitalize' }}>{proyek.tipe}</span>
-            <span style={{ fontSize: '11px', color: proyek.status === 'aktif' ? '#4ade80' : '#f87171', marginLeft: 'auto', background: proyek.status === 'aktif' ? 'rgba(74,222,128,0.1)' : 'rgba(248,113,113,0.1)', padding: '2px 10px', borderRadius: '20px' }}>
+            <span style={{ fontSize: '14px', color: '#B0B0B0', textTransform: 'capitalize' }}>{proyek.tipe}</span>
+            <span style={{ fontSize: '13px', color: proyek.status === 'aktif' ? '#4ade80' : '#f87171', marginLeft: 'auto', background: proyek.status === 'aktif' ? 'rgba(74,222,128,0.1)' : 'rgba(248,113,113,0.1)', padding: '3px 12px', borderRadius: '20px' }}>
               {proyek.status}
             </span>
           </div>
         </div>
 
-        {/* Ringkasan Data */}
-        <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '20px' }}>
-          <h3 style={{ fontSize: '14px', fontWeight: 600, letterSpacing: '1px', marginBottom: '16px', color: '#D0D0D0' }}>Ringkasan Data</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {Object.entries(proyek.data_summary || {}).map(([key, value]) => (
-              <div
-                key={key}
-                className="data-row"
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  fontSize: '13px',
-                  padding: '10px 14px',
-                  background: 'rgba(255,255,255,0.02)',
-                  borderRadius: '10px',
-                  border: '1px solid rgba(255,255,255,0.04)',
-                  transition: 'all 0.2s cubic-bezier(0.4,0,0.2,1)',
-                  cursor: 'default',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(204,51,51,0.08)';
-                  e.currentTarget.style.borderColor = 'rgba(204,51,51,0.3)';
-                  e.currentTarget.style.transform = 'translateX(4px)';
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'rgba(255,255,255,0.02)';
-                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.04)';
-                  e.currentTarget.style.transform = 'translateX(0)';
-                  e.currentTarget.style.boxShadow = 'none';
-                }}
-              >
-                <span style={{ color: '#A0A0A0', textTransform: 'capitalize' }}>{key.replace(/_/g, ' ')}</span>
-                <span style={{ fontWeight: 500 }}>{String(value)}</span>
+        {/* Highlight Cards */}
+        <div style={{ display: 'flex', gap: '10px', marginBottom: '28px' }}>
+          {isSupply ? (
+            <>
+              <div style={{ flex: 1, background: 'rgba(255,255,255,0.03)', borderRadius: '12px', padding: '16px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <div style={{ fontSize: '12px', color: '#A0A0A0', marginBottom: '6px' }}>STOK</div>
+                <div style={{ fontSize: '24px', fontWeight: 600 }}>{summary.stok_ton ?? '-'}<span style={{ fontSize: '14px', color: '#B0B0B0' }}> ton</span></div>
               </div>
-            ))}
+              <div style={{ flex: 1, background: 'rgba(255,255,255,0.03)', borderRadius: '12px', padding: '16px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <div style={{ fontSize: '12px', color: '#A0A0A0', marginBottom: '6px' }}>JENIS</div>
+                <div style={{ fontSize: '16px', fontWeight: 500 }}>{summary.jenis_bahan ?? '-'}</div>
+              </div>
+              <div style={{ flex: 1, background: 'rgba(255,255,255,0.03)', borderRadius: '12px', padding: '16px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <div style={{ fontSize: '12px', color: '#A0A0A0', marginBottom: '6px' }}>INSPEKSI</div>
+                <div style={{ fontSize: '14px', fontWeight: 500 }}>{summary.inspeksi_terakhir ?? '-'}</div>
+              </div>
+            </>
+          ) : (
+            <>
+              <div style={{ flex: 1, background: 'rgba(255,255,255,0.03)', borderRadius: '12px', padding: '16px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <div style={{ fontSize: '12px', color: '#A0A0A0', marginBottom: '6px' }}>VOLUME</div>
+                <div style={{ fontSize: '24px', fontWeight: 600 }}>{summary.volume_batuan_m3 ?? '-'}<span style={{ fontSize: '14px', color: '#B0B0B0' }}> m³</span></div>
+              </div>
+              <div style={{ flex: 1, background: 'rgba(255,255,255,0.03)', borderRadius: '12px', padding: '16px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <div style={{ fontSize: '12px', color: '#A0A0A0', marginBottom: '6px' }}>BOR</div>
+                <div style={{ fontSize: '24px', fontWeight: 600 }}>{summary.lubang_bor ?? '-'}</div>
+              </div>
+              <div style={{ flex: 1, background: 'rgba(255,255,255,0.03)', borderRadius: '12px', padding: '16px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <div style={{ fontSize: '12px', color: '#A0A0A0', marginBottom: '6px' }}>TIM</div>
+                <div style={{ fontSize: '24px', fontWeight: 600 }}>{summary.jumlah_tim ?? '-'}</div>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Progress Bar */}
+        <div style={{ marginBottom: '28px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', marginBottom: '8px', color: '#B0B0B0' }}>
+            <span>{isSupply ? 'Level Stok' : 'Progress Proyek'}</span>
+            <span>{progressPercent}%</span>
           </div>
+          <div style={{ height: '8px', background: 'rgba(255,255,255,0.1)', borderRadius: '4px', overflow: 'hidden' }}>
+            <div
+              style={{
+                height: '100%',
+                width: `${progressPercent}%`,
+                background: 'linear-gradient(90deg, #CC3333, #F97316)',
+                borderRadius: '4px',
+                transition: 'width 0.6s ease',
+              }}
+            />
+          </div>
+          <div style={{ fontSize: '12px', color: '#A0A0A0', marginTop: '6px' }}>{progressLabel}</div>
+        </div>
+
+        {/* Aktivitas Terbaru */}
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '20px', marginBottom: '24px' }}>
+          <h3 style={{ fontSize: '16px', fontWeight: 600, letterSpacing: '1px', marginBottom: '14px', color: '#D0D0D0' }}>Aktivitas Terbaru</h3>
+          {[
+            { icon: '✓', text: 'Inspeksi rutin selesai', time: '12 Jun' },
+            { icon: '↻', text: isSupply ? 'Pengiriman bahan peledak' : 'Pengeboran selesai', time: '10 Jun' },
+            { icon: '⚠', text: 'Pengecekan K3', time: '8 Jun' },
+          ].map((act, i) => (
+            <div key={i} style={{ display: 'flex', gap: '12px', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+              <span style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(204,51,51,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', color: '#CC3333' }}>{act.icon}</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: '14px', color: '#E0E0E0' }}>{act.text}</div>
+                <div style={{ fontSize: '12px', color: '#909090' }}>{act.time}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Koordinat & PJ */}
+        <div style={{ fontSize: '14px', color: '#A0A0A0', marginBottom: '8px' }}>
+          Koordinat: {proyek.geom.coordinates[1].toFixed(4)}, {proyek.geom.coordinates[0].toFixed(4)}
+        </div>
+        <div style={{ fontSize: '14px', color: '#A0A0A0' }}>
+          Penanggung Jawab: {isSupply ? 'Andi Pratama' : 'Budi Setiawan'} (Supervisor)
         </div>
       </div>
 
-      {/* Tombol Buka Webapp (sticky di bawah) */}
+      {/* Tombol Sticky */}
       <div style={{
         padding: '20px 32px',
         borderTop: '1px solid rgba(255,255,255,0.08)',
@@ -161,13 +217,13 @@ export default function MapPanel({
         <button
           style={{
             width: '100%',
-            padding: '14px',
+            padding: '16px',
             background: 'linear-gradient(135deg, #8B0000, #CC3333)',
             border: 'none',
-            borderRadius: '8px',
+            borderRadius: '10px',
             color: '#fff',
             fontWeight: 600,
-            fontSize: '14px',
+            fontSize: '16px',
             letterSpacing: '1px',
             cursor: 'pointer',
             boxShadow: '0 8px 20px rgba(204,51,51,0.3)',

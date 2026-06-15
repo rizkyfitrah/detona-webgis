@@ -51,6 +51,7 @@ export default function MapLegend({
               background: '#3B82F6',
               boxShadow: visibleDivisi.supply_chain ? '0 0 8px #3B82F6' : 'none',
               opacity: visibleDivisi.supply_chain ? 1 : 0.4,
+              display: 'inline-block',
             }}
           />
           <span>Gudang (SC)</span>
@@ -76,6 +77,7 @@ export default function MapLegend({
               background: '#F97316',
               boxShadow: visibleDivisi.operasional ? '0 0 8px #F97316' : 'none',
               opacity: visibleDivisi.operasional ? 1 : 0.4,
+              display: 'inline-block',
             }}
           />
           <span>Tambang (OPS)</span>
