@@ -63,9 +63,18 @@ export default function LoginForm() {
         if (error) throw error;
         alert('Akun berhasil dibuat! Silakan cek email untuk verifikasi.');
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-        router.push('/');
+const { error } = await supabase.auth.signInWithPassword({ email, password });
+if (error) throw error;
+window.location.href = '/';
+
+        // Tunggu session tersimpan, lalu redirect
+        const checkSession = setInterval(async () => {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session) {
+            clearInterval(checkSession);
+            window.location.href = '/';
+          }
+        }, 100);
       }
     } catch (err: any) {
       setError(err.message);
@@ -263,19 +272,20 @@ export default function LoginForm() {
           display: 'flex',
         }}
       >
-        {/* Partikel Latar Belakang */}
-        {[...Array(15)].map((_, i) => (
-          <div
-            key={`particle-${i}`}
-            className="particle"
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 8}s`,
-              opacity: Math.random() * 0.5 + 0.2,
-            }}
-          />
-        ))}
+        {/* Partikel hanya di-render setelah mount di klien */}
+        {entrance &&
+          [...Array(15)].map((_, i) => (
+            <div
+              key={`particle-${i}`}
+              className="particle"
+              style={{
+                left: `${Math.random() * 100}%`,
+                top: `${Math.random() * 100}%`,
+                animationDelay: `${Math.random() * 8}s`,
+                opacity: Math.random() * 0.5 + 0.2,
+              }}
+            />
+          ))}
 
         {/* ===== BACKGROUND FULLSCREEN ===== */}
         <div
@@ -680,7 +690,7 @@ export default function LoginForm() {
                       </div>
                     </div>
 
-                    {/* Tombol Sign In (perbaikan tanpa shorthand background) */}
+                    {/* Tombol Sign In */}
                     <button
                       type="submit"
                       disabled={loading}
@@ -826,17 +836,15 @@ export default function LoginForm() {
                     }}
                   />
 
-                  {/* Ornamen sudut */}
+                  {/* Ornamen sudut (sama) */}
                   <div style={{ position: 'absolute', top: '-1px', left: '-1px', width: '30px', height: '30px', borderTop: '2px solid rgba(204,51,51,0.7)', borderLeft: '2px solid rgba(204,51,51,0.7)', borderRadius: '4px 0 0 0', transition: 'all 0.6s ease', opacity: isHovering ? 1 : 0.5 }} />
                   <div style={{ position: 'absolute', top: '-1px', right: '-1px', width: '30px', height: '30px', borderTop: '2px solid rgba(204,51,51,0.7)', borderRight: '2px solid rgba(204,51,51,0.7)', borderRadius: '0 4px 0 0', transition: 'all 0.6s ease', opacity: isHovering ? 1 : 0.5 }} />
                   <div style={{ position: 'absolute', bottom: '-1px', left: '-1px', width: '30px', height: '30px', borderBottom: '2px solid rgba(204,51,51,0.7)', borderLeft: '2px solid rgba(204,51,51,0.7)', borderRadius: '0 0 0 4px', transition: 'all 0.6s ease', opacity: isHovering ? 1 : 0.5 }} />
                   <div style={{ position: 'absolute', bottom: '-1px', right: '-1px', width: '30px', height: '30px', borderBottom: '2px solid rgba(204,51,51,0.7)', borderRight: '2px solid rgba(204,51,51,0.7)', borderRadius: '0 0 4px 0', transition: 'all 0.6s ease', opacity: isHovering ? 1 : 0.5 }} />
 
-                  {/* Garis dekoratif */}
                   <div style={{ position: 'absolute', top: '12px', left: '10%', width: '80%', height: '1px', background: 'linear-gradient(to right, transparent, rgba(255,255,255,0.15), rgba(204,51,51,0.3), rgba(255,255,255,0.15), transparent)', transition: 'all 0.5s ease', opacity: isHovering ? 1 : 0.4 }} />
                   <div style={{ position: 'absolute', bottom: '12px', left: '10%', width: '80%', height: '1px', background: 'linear-gradient(to right, transparent, rgba(204,51,51,0.3), rgba(255,255,255,0.15), rgba(204,51,51,0.3), transparent)', transition: 'all 0.5s ease', opacity: isHovering ? 1 : 0.4 }} />
 
-                  {/* Titik dekoratif */}
                   <div style={{ position: 'absolute', top: '20px', left: '20px', width: '4px', height: '4px', backgroundColor: '#CC3333', boxShadow: '0 0 6px #CC3333', borderRadius: '50%', transition: 'all 0.4s ease', transform: isHovering ? 'scale(1.5)' : 'scale(1)' }} />
                   <div style={{ position: 'absolute', top: '20px', right: '20px', width: '4px', height: '4px', backgroundColor: '#CC3333', boxShadow: '0 0 6px #CC3333', borderRadius: '50%', transition: 'all 0.4s ease', transform: isHovering ? 'scale(1.5)' : 'scale(1)' }} />
                   <div style={{ position: 'absolute', bottom: '20px', left: '20px', width: '4px', height: '4px', backgroundColor: '#CC3333', boxShadow: '0 0 6px #CC3333', borderRadius: '50%', transition: 'all 0.4s ease', transform: isHovering ? 'scale(1.5)' : 'scale(1)' }} />
@@ -970,7 +978,7 @@ export default function LoginForm() {
                       </div>
                     </div>
 
-                    {/* Tombol Daftar (perbaikan tanpa shorthand background) */}
+                    {/* Tombol Daftar */}
                     <button
                       type="submit"
                       disabled={loading}
