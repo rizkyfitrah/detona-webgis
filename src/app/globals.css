@@ -1,19 +1,30 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Reset global untuk tema gelap */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-html, body {
+html,
+body {
   background: #0a0a0a;
   margin: 0;
   padding: 0;
+  font-family: 'Inter', sans-serif;
+  color: #fff;
 }
+
+/* Scrollbar elegan */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(204, 51, 51, 0.5);
+  border-radius: 2px;
+}
+
 
 /* Animasi fade in */
 @keyframes fadeIn {
@@ -41,3 +52,14 @@ html, body {
   animation: slowPulse 4s ease-in-out infinite;
 }
 
+/* Partikel (sama dengan login) */
+.particle {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  background: rgba(204, 51, 51, 0.6);
+  border-radius: 50%;
+  filter: blur(1px);
+  pointer-events: none;
+  animation: float 8s ease-in-out infinite;
+}
