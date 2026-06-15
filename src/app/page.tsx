@@ -1,5 +1,5 @@
-import MapView from '@/components/map/MapView';
+import MapViewWrapper from '@/components/map/MapViewWrapper';
 
 export default function Home() {
-  return <MapView />;
+  return <MapViewWrapper />;
 }
