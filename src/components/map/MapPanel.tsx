@@ -1,6 +1,17 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useMemo } from 'react';
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Area,
+  AreaChart,
+} from 'recharts';
 
 interface Proyek {
   id: string;
@@ -11,6 +22,58 @@ interface Proyek {
   data_summary: any;
   geom: { coordinates: [number, number] };
 }
+
+// Generate data harian dummy
+function generateDailyData(type: 'gudang' | 'tambang') {
+  const data = [];
+  const now = new Date();
+  for (let i = 29; i >= 0; i--) {
+    const date = new Date(now);
+    date.setDate(date.getDate() - i);
+    const dayStr = date.getDate().toString().padStart(2, '0');
+    const monthStr = (date.getMonth() + 1).toString().padStart(2, '0');
+    const label = `${dayStr}/${monthStr}`;
+
+    let value = 0;
+    if (type === 'gudang') {
+      // Pengeluaran handak harian (ton) dengan variasi acak
+      value = Math.floor(Math.random() * 50 + 10);
+    } else {
+      // Produksi harian (m³)
+      value = Math.floor(Math.random() * 2000 + 500);
+    }
+    data.push({ date: label, value });
+  }
+  return data;
+}
+
+// Tooltip kustom premium
+const CustomTooltip = ({ active, payload, label, type }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div
+        style={{
+          background: 'rgba(10, 10, 10, 0.8)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          border: '1px solid rgba(204, 51, 51, 0.4)',
+          borderRadius: '8px',
+          padding: '10px 14px',
+          color: '#fff',
+          fontSize: '12px',
+          fontFamily: 'Inter, sans-serif',
+          boxShadow: '0 8px 20px rgba(0,0,0,0.5)',
+        }}
+      >
+        <p style={{ margin: 0, color: '#B0B0B0' }}>{label}</p>
+        <p style={{ margin: '4px 0 0', fontWeight: 600, color: type === 'gudang' ? '#60A5FA' : '#FB923C' }}>
+          {type === 'gudang' ? `${payload[0].value} ton` : `${payload[0].value} m³`}
+        </p>
+      </div>
+    );
+  }
+  return null;
+};
 
 export default function MapPanel({
   proyek,
@@ -27,22 +90,32 @@ export default function MapPanel({
     }
   }, [proyek]);
 
+  const dailyData = useMemo(() => {
+    if (!proyek) return [];
+    return generateDailyData(proyek.tipe);
+  }, [proyek]);
+
   if (!proyek) return null;
 
   const isSupply = proyek.divisi === 'supply_chain';
   const summary = proyek.data_summary || {};
 
-  // Progress bar
+  // Hitung progress
   let progressPercent = 0;
   let progressLabel = '';
+  let targetLabel = '';
+
   if (isSupply) {
     const kapasitas = summary.kapasitas_ton || 1;
     const stok = summary.stok_ton || 0;
     progressPercent = Math.min((stok / kapasitas) * 100, 100);
     progressLabel = `Stok ${stok} / ${kapasitas} ton`;
   } else {
-    progressPercent = summary.progress_mingguan_persen || 0;
-    progressLabel = `Progress ${progressPercent}%`;
+    const volume = summary.volume_batuan_m3 || 0;
+    const target = summary.target_batuan_m3 || 50000;
+    progressPercent = Math.min((volume / target) * 100, 100);
+    progressLabel = `Produksi ${volume.toLocaleString()} m³`;
+    targetLabel = `Target: ${target.toLocaleString()} m³/bulan`;
   }
 
   return (
@@ -114,11 +187,26 @@ export default function MapPanel({
             {proyek.nama_lokasi}
           </h2>
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '14px', padding: '5px 14px', borderRadius: '20px', background: isSupply ? 'rgba(59,130,246,0.12)' : 'rgba(249,115,22,0.12)', color: isSupply ? '#60A5FA' : '#FB923C', border: `1px solid ${isSupply ? 'rgba(59,130,246,0.3)' : 'rgba(249,115,22,0.3)'}`, fontWeight: 500 }}>
+            <span style={{
+              fontSize: '14px',
+              padding: '5px 14px',
+              borderRadius: '20px',
+              background: isSupply ? 'rgba(59,130,246,0.12)' : 'rgba(249,115,22,0.12)',
+              color: isSupply ? '#60A5FA' : '#FB923C',
+              border: `1px solid ${isSupply ? 'rgba(59,130,246,0.3)' : 'rgba(249,115,22,0.3)'}`,
+              fontWeight: 500,
+            }}>
               {isSupply ? 'Supply Chain' : 'Operasional'}
             </span>
             <span style={{ fontSize: '14px', color: '#B0B0B0', textTransform: 'capitalize' }}>{proyek.tipe}</span>
-            <span style={{ fontSize: '13px', color: proyek.status === 'aktif' ? '#4ade80' : '#f87171', marginLeft: 'auto', background: proyek.status === 'aktif' ? 'rgba(74,222,128,0.1)' : 'rgba(248,113,113,0.1)', padding: '3px 12px', borderRadius: '20px' }}>
+            <span style={{
+              fontSize: '13px',
+              color: proyek.status === 'aktif' ? '#4ade80' : '#f87171',
+              marginLeft: 'auto',
+              background: proyek.status === 'aktif' ? 'rgba(74,222,128,0.1)' : 'rgba(248,113,113,0.1)',
+              padding: '3px 12px',
+              borderRadius: '20px',
+            }}>
               {proyek.status}
             </span>
           </div>
@@ -159,10 +247,62 @@ export default function MapPanel({
           )}
         </div>
 
+        {/* Line Chart Premium */}
+        <div style={{
+          marginBottom: '28px',
+          background: 'rgba(255,255,255,0.02)',
+          borderRadius: '14px',
+          padding: '16px',
+          border: '1px solid rgba(255,255,255,0.06)',
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+            <span style={{ fontSize: '12px', color: '#B0B0B0', fontWeight: 500 }}>
+              {isSupply ? 'Pengeluaran Handak Harian (30 Hari)' : 'Produksi Harian (30 Hari)'}
+            </span>
+            <span style={{ fontSize: '11px', color: isSupply ? '#60A5FA' : '#FB923C' }}>
+              {isSupply ? 'ton' : 'm³'}
+            </span>
+          </div>
+          <ResponsiveContainer width="100%" height={160}>
+            <AreaChart data={dailyData}>
+              <defs>
+                <linearGradient id="colorLine" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={isSupply ? '#3B82F6' : '#F97316'} stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor={isSupply ? '#3B82F6' : '#F97316'} stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid stroke="rgba(255,255,255,0.05)" strokeDasharray="3 3" />
+              <XAxis
+                dataKey="date"
+                tick={{ fontSize: 9, fill: '#808080' }}
+                axisLine={{ stroke: 'rgba(255,255,255,0.1)' }}
+                tickLine={false}
+                interval="preserveStartEnd"
+              />
+              <YAxis
+                tick={{ fontSize: 9, fill: '#808080' }}
+                axisLine={false}
+                tickLine={false}
+                width={40}
+              />
+              <Tooltip content={<CustomTooltip type={isSupply ? 'gudang' : 'tambang'} />} />
+              <Area
+                type="monotone"
+                dataKey="value"
+                stroke={isSupply ? '#3B82F6' : '#F97316'}
+                strokeWidth={2}
+                fill="url(#colorLine)"
+                dot={false}
+                activeDot={{ r: 4, stroke: '#fff', strokeWidth: 2, fill: isSupply ? '#3B82F6' : '#F97316' }}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+
         {/* Progress Bar */}
         <div style={{ marginBottom: '28px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', marginBottom: '8px', color: '#B0B0B0' }}>
-            <span>{isSupply ? 'Level Stok' : 'Progress Proyek'}</span>
+            <span>{isSupply ? 'Level Stok' : 'Capaian Produksi'}</span>
             <span>{progressPercent}%</span>
           </div>
           <div style={{ height: '8px', background: 'rgba(255,255,255,0.1)', borderRadius: '4px', overflow: 'hidden' }}>
@@ -170,13 +310,18 @@ export default function MapPanel({
               style={{
                 height: '100%',
                 width: `${progressPercent}%`,
-                background: 'linear-gradient(90deg, #CC3333, #F97316)',
+                background: isSupply
+                  ? 'linear-gradient(90deg, #3B82F6, #60A5FA)'
+                  : 'linear-gradient(90deg, #F97316, #FB923C)',
                 borderRadius: '4px',
                 transition: 'width 0.6s ease',
               }}
             />
           </div>
-          <div style={{ fontSize: '12px', color: '#A0A0A0', marginTop: '6px' }}>{progressLabel}</div>
+          <div style={{ fontSize: '12px', color: '#A0A0A0', marginTop: '6px', display: 'flex', justifyContent: 'space-between' }}>
+            <span>{progressLabel}</span>
+            {!isSupply && <span>{targetLabel}</span>}
+          </div>
         </div>
 
         {/* Aktivitas Terbaru */}

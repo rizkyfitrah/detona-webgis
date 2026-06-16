@@ -7,10 +7,12 @@ import 'leaflet/dist/leaflet.css';
 import { supabase } from '@/lib/supabase';
 import MapTooltip from './MapTooltip';
 import MapPanel from './MapPanel';
-import MapLegend from './MapLegend';
 import MapSidebar from './MapSidebar';
+import MapTopBar from './MapTopBar';
+import MapBottomDashboard from './MapBottomDashboard';
+import UserMenu from './UserMenu';
+import MapWalkthrough from './MapWalkthrough';
 
-// Perbaiki ikon default Leaflet
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
@@ -28,16 +30,12 @@ interface Proyek {
   geom: { coordinates: [number, number] };
 }
 
-// Komponen pembantu untuk mengambil instance peta
 function MapController({ mapRef }: { mapRef: React.MutableRefObject<L.Map | null> }) {
   const map = useMap();
-  useEffect(() => {
-    mapRef.current = map;
-  }, [map, mapRef]);
+  useEffect(() => { mapRef.current = map; }, [map, mapRef]);
   return null;
 }
 
-// Komponen penampung marker dengan event hover & klik
 function ProyekMarkers({
   proyekData,
   visibleDivisi,
@@ -64,6 +62,7 @@ function ProyekMarkers({
         const isHovered = hoveredId === p.id;
         const size = isSelected ? 22 : isHovered ? 18 : 14;
         const color = p.tipe === 'gudang' ? '#3B82F6' : '#F97316';
+        const pulse = (!isHovered && !isSelected) ? 'animation: marker-pulse 2s ease-in-out infinite;' : '';
 
         return (
           <Marker
@@ -71,31 +70,14 @@ function ProyekMarkers({
             position={[p.geom.coordinates[1], p.geom.coordinates[0]]}
             icon={L.divIcon({
               className: 'custom-marker',
-              html: `<div style="
-                width:${size}px;height:${size}px;
-                background:${color};
-                border:2px solid white;
-                border-radius:50%;
-                box-shadow:0 0 ${isSelected ? 20 : isHovered ? 15 : 8}px ${color};
-                transition:all 0.25s cubic-bezier(0.4,0,0.2,1);
-              "></div>`,
+              html: `<div style="width:${size}px;height:${size}px;background:${color};border:2px solid white;border-radius:50%;box-shadow:0 0 ${isSelected ? 20 : isHovered ? 15 : 8}px ${color};transition:all 0.25s;${pulse}"></div>`,
               iconSize: [size, size],
               iconAnchor: [size / 2, size / 2],
             })}
             eventHandlers={{
               mouseover: (e) => {
                 const pos = (e.originalEvent as MouseEvent);
-                onHover(
-                  {
-                    id: p.id,
-                    nama: p.nama_lokasi,
-                    divisi: p.divisi,
-                    tipe: p.tipe,
-                    status: p.status,
-                    data_summary: p.data_summary,
-                  },
-                  { x: pos.clientX, y: pos.clientY }
-                );
+                onHover({ id: p.id, nama: p.nama_lokasi, divisi: p.divisi, tipe: p.tipe, status: p.status, data_summary: p.data_summary }, { x: pos.clientX, y: pos.clientY });
               },
               mouseout: () => onHoverEnd(),
               click: () => onClickProyek(p),
@@ -107,7 +89,6 @@ function ProyekMarkers({
   );
 }
 
-// Partikel latar (hanya mount di klien)
 function FloatingParticles() {
   return (
     <div style={{ position: 'absolute', inset: 0, zIndex: 100, pointerEvents: 'none', overflow: 'hidden' }}>
@@ -147,7 +128,6 @@ export default function MapView() {
   const [mapReady, setMapReady] = useState(false);
 
   const mapRef = useRef<L.Map | null>(null);
-  const searchBarRef = useRef<HTMLDivElement | null>(null);
   const sidebarRef = useRef<HTMLDivElement | null>(null);
 
   const fetchProyek = useCallback(async () => {
@@ -171,7 +151,6 @@ export default function MapView() {
     });
   }, [fetchProyek]);
 
-  // Zoom ke proyek yang dipilih
   useEffect(() => {
     if (selectedProyek && mapRef.current) {
       const [lng, lat] = selectedProyek.geom.coordinates;
@@ -179,20 +158,15 @@ export default function MapView() {
     }
   }, [selectedProyek]);
 
-  // Tutup sidebar saat panel terbuka
   useEffect(() => {
     if (selectedProyek) setSidebarOpen(false);
   }, [selectedProyek]);
 
-  // Tutup sidebar saat klik di luar
   useEffect(() => {
     if (!sidebarOpen) return;
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as Node;
-      if (
-        sidebarRef.current && !sidebarRef.current.contains(target) &&
-        searchBarRef.current && !searchBarRef.current.contains(target)
-      ) {
+      if (sidebarRef.current && !sidebarRef.current.contains(target)) {
         setSidebarOpen(false);
       }
     };
@@ -212,7 +186,6 @@ export default function MapView() {
 
   return (
     <div className="relative w-full h-screen" style={{ background: '#0a0a0a' }}>
-      {/* MapContainer dengan key dinamis untuk mencegah error reuse */}
       <MapContainer
         key={mapReady ? 'map-ready' : 'map-loading'}
         center={[-2.5, 114.5]}
@@ -236,61 +209,16 @@ export default function MapView() {
         />
       </MapContainer>
 
-      {/* Partikel latar */}
       {mounted && <FloatingParticles />}
 
-      {/* Search Bar */}
-      <div
-        ref={searchBarRef}
-        style={{
-          position: 'absolute',
-          top: '16px',
-          left: '16px',
-          zIndex: 1100,
-          display: 'flex',
-          alignItems: 'center',
-          background: 'rgba(10, 10, 10, 0.75)',
-          backdropFilter: 'blur(16px) saturate(180%)',
-          WebkitBackdropFilter: 'blur(16px) saturate(180%)',
-          border: '1px solid rgba(204, 51, 51, 0.35)',
-          borderRadius: '12px',
-          padding: '0 12px',
-          boxShadow: '0 8px 25px rgba(0,0,0,0.5)',
-          width: '260px',
-        }}
-      >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A0A0A0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-          <circle cx="11" cy="11" r="8" />
-          <path d="M21 21l-4.35-4.35" />
-        </svg>
-        <input
-          type="text"
-          placeholder="Cari proyek..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          onFocus={() => setSidebarOpen(true)}
-          style={{
-            flex: 1,
-            padding: '10px 8px',
-            background: 'transparent',
-            border: 'none',
-            color: '#fff',
-            fontSize: '13px',
-            outline: 'none',
-            fontFamily: 'Inter, sans-serif',
-          }}
-        />
-        {searchQuery && (
-          <button
-            onClick={() => { setSearchQuery(''); setSidebarOpen(true); }}
-            style={{ background: 'none', border: 'none', color: '#A0A0A0', cursor: 'pointer', fontSize: '16px' }}
-          >
-            ✕
-          </button>
-        )}
-      </div>
+      <MapTopBar
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        onSearchFocus={() => setSidebarOpen(true)}
+        visibleDivisi={visibleDivisi}
+        toggleDivisi={toggleDivisi}
+      />
 
-      {/* Sidebar (hilang sempurna saat tertutup) */}
       <div ref={sidebarRef}>
         <MapSidebar
           proyekData={proyekData}
@@ -302,11 +230,10 @@ export default function MapView() {
         />
       </div>
 
-      {/* Legenda / Filter (hilang saat panel terbuka) */}
-      {!selectedProyek && (
-        <MapLegend visibleDivisi={visibleDivisi} toggleDivisi={toggleDivisi} />
-      )}
+      <UserMenu />
 
+      <MapBottomDashboard proyekData={proyekData} />
+      <MapWalkthrough />
       {tooltipData && <MapTooltip data={tooltipData} x={tooltipPos.x} y={tooltipPos.y} />}
       <MapPanel proyek={selectedProyek} onClose={() => setSelectedProyek(null)} />
     </div>

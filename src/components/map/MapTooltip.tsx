@@ -28,14 +28,13 @@ export default function MapTooltip({
   useEffect(() => {
     if (data) {
       setVisible(true);
-      // Hitung ulang posisi agar tidak keluar layar
-      const tooltipWidth = 260;
-      const tooltipHeight = 140; // perkiraan
-      let newX = x + 20; // offset dari kursor
-      let newY = y - 70;
+      const tooltipWidth = 270;
+      const tooltipHeight = 160; // lebih tinggi karena progress bar
+      let newX = x + 20;
+      let newY = y - 80;
 
       if (newX + tooltipWidth > window.innerWidth - 10) {
-        newX = x - tooltipWidth - 20; // geser ke kiri
+        newX = x - tooltipWidth - 20;
       }
       if (newY + tooltipHeight > window.innerHeight - 10) {
         newY = y - tooltipHeight - 20;
@@ -55,11 +54,24 @@ export default function MapTooltip({
   const isSupply = data.divisi === 'supply_chain';
   const summary = data.data_summary || {};
 
-  let highlightText = '';
+  // Hitung progress
+  let progressPercent = 0;
+  let progressLabel = '';
+  let progressDetail = '';
+
   if (isSupply) {
-    highlightText = `Stok: ${summary.stok_ton ?? '-'} / ${summary.kapasitas_ton ?? '-'} ton`;
+    const kapasitas = summary.kapasitas_ton || 1;
+    const stok = summary.stok_ton || 0;
+    progressPercent = Math.min((stok / kapasitas) * 100, 100);
+    progressLabel = `Stok ${stok} / ${kapasitas} ton`;
+    progressDetail = `${progressPercent.toFixed(0)}% terisi`;
   } else {
-    highlightText = `Progress: ${summary.progress_mingguan_persen ?? '-'}%`;
+    // Tambang: gunakan progress_mingguan_persen sebagai capaian bulanan
+    const volume = summary.volume_batuan_m3 ?? 0;
+    const persen = summary.progress_mingguan_persen ?? 0;
+    progressPercent = Math.min(persen, 100);
+    progressLabel = `Produksi ${volume.toLocaleString()} m³`;
+    progressDetail = `Capaian ${progressPercent}% bulan ini`;
   }
 
   return (
@@ -75,7 +87,7 @@ export default function MapTooltip({
         WebkitBackdropFilter: 'blur(24px) saturate(200%)',
         border: '1px solid rgba(204, 51, 51, 0.35)',
         borderRadius: '14px',
-        padding: '16px 18px',
+        padding: '16px 18px 14px',
         color: '#fff',
         fontFamily: 'Inter, sans-serif',
         fontSize: '13px',
@@ -84,7 +96,7 @@ export default function MapTooltip({
         opacity: visible ? 1 : 0,
         transform: visible ? 'scale(1)' : 'scale(0.85)',
         transition: 'opacity 0.25s cubic-bezier(0.4,0,0.2,1), transform 0.25s cubic-bezier(0.4,0,0.2,1)',
-        minWidth: '220px',
+        minWidth: '240px',
         maxWidth: '280px',
       }}
     >
@@ -119,7 +131,7 @@ export default function MapTooltip({
       </div>
 
       {/* Sub info */}
-      <div style={{ fontSize: '11px', color: '#B0B0B0', marginBottom: '8px', display: 'flex', gap: '6px', alignItems: 'center' }}>
+      <div style={{ fontSize: '11px', color: '#B0B0B0', marginBottom: '10px', display: 'flex', gap: '6px', alignItems: 'center' }}>
         <span>{isSupply ? 'SC' : 'OPS'} • {data.tipe}</span>
         <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: data.status === 'aktif' ? '#4ade80' : '#f87171' }}>
           <span style={{ fontSize: '10px' }}>{data.status === 'aktif' ? '●' : '●'}</span>
@@ -127,18 +139,31 @@ export default function MapTooltip({
         </span>
       </div>
 
-      {/* Highlight */}
-      <div style={{
-        fontSize: '12px',
-        color: '#E0E0E0',
-        background: 'rgba(255,255,255,0.04)',
-        borderRadius: '8px',
-        padding: '8px 10px',
-        marginTop: '4px',
-        display: 'flex',
-        justifyContent: 'space-between',
-      }}>
-        <span style={{ color: '#C0C0C0' }}>{highlightText}</span>
+      {/* Progress bar */}
+      <div style={{ marginBottom: '6px' }}>
+        <div style={{
+          height: '6px',
+          background: 'rgba(255,255,255,0.1)',
+          borderRadius: '3px',
+          overflow: 'hidden',
+          marginBottom: '6px',
+        }}>
+          <div
+            style={{
+              height: '100%',
+              width: `${progressPercent}%`,
+              background: isSupply
+                ? 'linear-gradient(90deg, #3B82F6, #60A5FA)'
+                : 'linear-gradient(90deg, #F97316, #FB923C)',
+              borderRadius: '3px',
+              transition: 'width 0.6s ease',
+            }}
+          />
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px' }}>
+          <span style={{ color: '#D0D0D0', fontWeight: 500 }}>{progressLabel}</span>
+          <span style={{ color: '#A0A0A0' }}>{progressDetail}</span>
+        </div>
       </div>
     </div>
   );

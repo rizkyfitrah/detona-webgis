@@ -63,3 +63,9 @@ body {
   pointer-events: none;
   animation: float 8s ease-in-out infinite;
 }
+
+@keyframes marker-pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.25); }
+  100% { transform: scale(1); }
+}
